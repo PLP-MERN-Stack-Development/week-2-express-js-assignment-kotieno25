@@ -3,14 +3,20 @@
 // Import required modules
 const express = require('express');
 const bodyParser = require('body-parser');
-const { v4: uuidv4 } = require('uuid');
+
+// Import custom middleware and routes
+const logger = require('./middleware/logger');
+const auth = require('./middleware/auth');
+const validateProduct = require('./middleware/validator');
+const productRoutes = require('./routes/products');
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
 // Middleware setup
 app.use(bodyParser.json());
+app.use(logger);
 
 // Sample in-memory products database
 let products = [
@@ -45,25 +51,32 @@ app.get('/', (req, res) => {
   res.send('Welcome to the Product API! Go to /api/products to see all products.');
 });
 
-// TODO: Implement the following routes:
-// GET /api/products - Get all products
-// GET /api/products/:id - Get a specific product
-// POST /api/products - Create a new product
-// PUT /api/products/:id - Update a product
-// DELETE /api/products/:id - Delete a product
+// Product routes with authentication and validation
+app.use('/api/products', auth, productRoutes);
 
-// Example route implementation for GET /api/products
-app.get('/api/products', (req, res) => {
-  res.json(products);
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  
+  const status = err.status || 500;
+  const message = err.message || 'Something went wrong!';
+  
+  res.status(status).json({
+    error: err.name || 'Error',
+    message: message
+  });
 });
 
-// TODO: Implement custom middleware for:
-// - Request logging
-// - Authentication
-// - Error handling
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: 'The requested resource was not found'
+  });
+});
 
 // Start the server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 
